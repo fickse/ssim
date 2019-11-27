@@ -11,21 +11,27 @@ string <- c(
 '#!/bin/bash',
 '',
 #paste0('#SBATCH --nodes=', nodes),
-paste0('#SBATCH --ntasks=', cores),
+#paste0('#SBATCH --ntasks=', cores),
 paste0('#SBATCH --time=', timeLimit),
 paste0('#SBATCH --partition=', partition),
 #paste0('#SBATCH --qos=', qos),
 paste0('#SBATCH --output=', output),
+paste0('#SBATCH --account=', acct),
+paste0('#SBATCH --array=1-', nrow(jobs),'%',maxArray),
 '
-module purge
 
-module load intel
-module load impi
-module load loadbalance
-module load R/3.5.0
+echo "SLURM_JOBID: " $SLURM_JOBID
+echo "SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+echo "SLURM_ARRAY_JOB_ID: " $SLURM_ARRAY_JOB_ID
+echo "Scratch: " $GLOBAL_SCRATCH
+
+module load R/3.6.1-gcc7.1.0
+module load gdal/2.2.2-gcc proj/5.0.1-gcc-7.1.0 gcc/7.1.0
+module load gis/geos-3.5.0
+
 
 echo $(date)
-time mpirun lb workList
+Rscript loadBalance.R $SLURM_ARRAY_TASK_ID
 echo $(date)
 
 
