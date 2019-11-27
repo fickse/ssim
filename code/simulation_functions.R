@@ -124,9 +124,6 @@ simul_data <- function(R) {
     # D = treatment occurred
     # time = timestep
   
-  ddate <- as.Date('2006-02-15')
-  tt <- seq( as.Date('2001-01-01'), as.Date('2010-01-01'), by = 16)
-
   
   # Determine number and type of controls
   n1 <- round((1-misMatch)*nControl)
@@ -148,6 +145,14 @@ simul_data <- function(R) {
   # generate controls
   ctrl <- matrix(NA, nControl, length(tt))
 
+  # default values
+  noi <- c('grassland' = 0.04, 'forest' = 0.02)
+
+  # over-ride default veg values
+  if(overrideNoise){
+      noi <- c('grassland' = sdNoise, 'forest' = sdNoise)
+  } 
+
   for( i in 1:length(ctrT)){
      
      affinity <- rnorm(1, 0, affinitySD)
@@ -157,11 +162,11 @@ simul_data <- function(R) {
      
     if(ctrT[i] == 'grassland'){
           seas <-  seasonal(.5, tt)
-          nse <- noise(.04, tt)
+          nse <- noise(noi['grassland'], tt)
           hadj <- ybar('grass', tt)
       } else if(ctrT[i] == 'forest'){
           seas <-  seasonal(.1, tt)
-          nse <- noise(.02, tt)
+          nse <- noise(noi['forest'], tt)
           hadj <- ybar('forest', tt)
       }
       
@@ -172,11 +177,11 @@ simul_data <- function(R) {
     
       if(type == 'grassland'){
           seas <-  seasonal(.5, tt)
-          nse <- noise(.04, tt)
+          nse <- noise(noi['grassland'], tt)
           hadj <- ybar('grass', tt)
       } else if(type == 'forest'){
           seas <-  seasonal(.1, tt)
-          nse <- noise(.02, tt)
+          nse <- noise(noi['forest'], tt)
           hadj <- ybar('forest', tt)
       }
     

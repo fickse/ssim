@@ -14,7 +14,7 @@ CI <- function(s){
 
   X = X[, c('trt', grep('c', names(X), value = TRUE) ), with = F]
   
-  y <- CausalImpact::CausalImpact(as.data.frame(X), pre.period = pre, post.period  =post)
+  y <- CausalImpact::CausalImpact(as.matrix(X), pre.period = pre, post.period  =post)
   
   list( effect = y$series[, c('point.effect', 'point.effect.upper', 'point.effect.lower')],  model  = y)
 }
@@ -48,27 +48,68 @@ BFAST <- function(s){
 gSynth <- function(G,returnModel = FALSE, ...){
     
     require(gsynth)
-    arguments <- list(...)
+    arguments <-list(...)
+    
+    nControl <- length(unique(  G$id[which(!grepl('trt', G$id))] ))
     
     d <- list( force = 'two-way', CV = TRUE, r = c(0,5), se = FALSE, inference = 'parametric', nboots = 1000, parallel=FALSE, cores = 1)
     
-    if(length(arguments > 0)){
+    if(length(arguments) > 0){
       for( a in names(arguments) ){
         d[[a]] <- arguments[[a]]
       }
     }
     
-    g <- gsynth(y ~ D , data = G$D, index = c("id","time"), force = d$force, CV = d$CV, r = d$r, se = d$se, inference = d$inference, nboots = d$nboots, parallel = d$parallel, cores = d$cores) 
-
+    # first try
+    cat('\ngsynth first try\n')
+      g <- try({ gsynth(y ~ D , data = G$D, index = c("id","time"), force = d$force, CV = d$CV, r = d$r, se = d$se, inference = d$inference, nboots = d$nboots, parallel = d$parallel, cores = d$cores) })
+    
+    if(class(g) == 'try-error'){
+      cat('\n gsynth second try: limiting r\n')
+        
+          d$r <- c( 0, pmin(0, nControl))
+          g <- try({ gsynth(y ~ D , data = G$D, index = c("id","time"), force = d$force, CV = d$CV, r = d$r, se = d$se, inference = d$inference, nboots = d$nboots, parallel = d$parallel, cores = d$cores) })
+     
+     }
+    
+    if(class(g) == 'try-error'){
+      cat('\n gsynth third try: nonparametric boot r\n')
+        
+          d$inference = 'nonparametric'
+          g <- try({ gsynth(y ~ D , data = G$D, index = c("id","time"), force = d$force, CV = d$CV, r = d$r, se = d$se, inference = d$inference, nboots = d$nboots, parallel = d$parallel, cores = d$cores) })
+     
+     }
+    
     if (returnModel){
 
         ## saves all boots!
-        ## return(g)
+         return(g)
 
-        return( list(est.ind = g$est.ind, est.att = g$est.att, att = g$att, eff = g$eff))
+        
     } else {
-       if(d$se) { return( g$est.att ) } else { return(g$att) }
+       return( list(  est.ind = g$est.ind, est.att = g$est.att, att = g$att, eff = g$eff) )
    } 
+}
+
+
+
+DD <- function(G) {
+
+    ## linear model
+    ## prediction  = effect of treatment group + effect of time + effect of treatment*time
+
+    require(data.table)
+    g <- data.table(G$D)
+    g <- g[D == 0,]
+    m <- lm(y ~  id + as.factor(time), g)
+    
+    g0 <- g[id == 'trt',]
+    g$D <- 0
+    p <- predict(m, newdata = g0, interval = 'prediction')
+    p <- as.data.frame(p)
+    
+    data.frame( DDatt = g0$y - p$fit, DDupr = g0$y - p$upr, DDlwr = g0$y - p$lwr)
+    
 }
 
 
@@ -83,20 +124,16 @@ evaluate <- function(s){
     names(ci) <- paste0('CI', names(ci))
     tr <- cbind(tr, ci)
     
-     dd <- gSynth(s, returnModel = TRUE, se = TRUE, CV=FALSE, r = c(0))
-    dd <- as.data.frame(dd$est.att[,c(1,4,3)])
-    names(dd) <- paste0('DD', names(dd))
+    dd <- DD(s)
     tr <- cbind(tr, dd)
     
-    gs <- gSynth(s, se=TRUE, inference = 'nonparametric', CV = TRUE, returnModel = TRUE)
-    #gs <- gSynth(s, se=TRUE, CV = TRUE, returnModel = TRUE)
-    gs <- as.data.frame(gs$est.att)
-    names(gs) <- paste0('GS', names(gs))
+    gs <- gSynth(s, se=TRUE, force = 'two-way', inference = 'nonparametric',r = c(0,5), CV = TRUE, returnModel = FALSE)
     
+    gs <- as.data.frame(gs$est.att[, c(1,3,4)])
+    names(gs) <- paste0('GS', names(gs))
+    tr <- cbind(tr, gs)
+
     tr$bfast <- BFAST(s)$effect
-
-
-    tr$gs <- gs
 
     tr
 
