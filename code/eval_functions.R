@@ -37,9 +37,10 @@ BFAST <- function(s){
     ef[tt > ddate] <- ef[tt > ddate] - base
     ef[tt <= ddate] <- 0
     
+    
     bp <- b$output[[1]]$bp.Vt
     cibp <- b$output[[1]]$ci.Vt
-    return(list(bfast = b, time = tt, effect = ef, breakpoints = bp, ci = cibp))
+    return(list(bfast = b, time = tt, effect = ef, breakpoints = bp, ci = cibp, base = base))
 
 }
 
@@ -100,18 +101,17 @@ DD <- function(G) {
 
     require(data.table)
     g <- data.table(G$D)
-    g <- g[D == 0,]
-    m <- lm(y ~  id + as.factor(time), g)
+    gi <- g[D == 0,]
+    m <- lm(y ~  id + as.factor(time), gi)
     
     g0 <- g[id == 'trt',]
-    g$D <- 0
+    
     p <- predict(m, newdata = g0, interval = 'prediction')
     p <- as.data.frame(p)
     
-    data.frame( DDatt = g0$y - p$fit, DDupr = g0$y - p$upr, DDlwr = g0$y - p$lwr)
+   k =  data.frame( DDatt =  g0$y - p$fit  , DDupr = g0$y - p$upr  , DDlwr = g0$y -p$lwr )
     
 }
-
 
 
 
@@ -138,3 +138,32 @@ evaluate <- function(s){
     tr
 
 }
+
+
+
+
+evaluate.example <- function(s){
+    
+    # s is output from simul_data
+    tr <- s$truth
+    
+    ci <- as.data.table(CI(s)$effect)
+    names(ci) <- paste0('CI', names(ci))
+    tr <- cbind(tr, ci)
+    
+    dd <- DD(s)
+    tr <- cbind(tr, dd)
+    
+    gs <- gSynth(s, se=TRUE, force = 'two-way', inference = 'parametric',r = c(0,5), CV = TRUE, returnModel = FALSE)
+    
+    gs <- as.data.frame(gs$est.att[, c(1,3,4)])
+    names(gs) <- paste0('GS', names(gs))
+    tr <- cbind(tr, gs)
+    
+    b <- BFAST(s)
+    tr$bfast <- as.numeric(b$bfast$output[[1]]$Tt)- b$base
+
+    tr
+
+}
+
