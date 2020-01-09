@@ -21,25 +21,29 @@ R <- data.table(RUN)
 
 
 
-x0 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.1,
+x0 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.3,
     nControl = 20, misMatch = 0, climSD = 0.1, climCenter = 10,
     satLambda = 0.05, rwSD = 0.01, affinitySD = 0.25, timeVaryingAffinitySD = 0.05,
     randConstantSD = 0.05, overrideNoise = TRUE)
  
  
- x1 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.1,
+ x1 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.3,
     nControl = 20, misMatch = .5, climSD = 0.1, climCenter = 10,
     satLambda = 0.05, rwSD = 0.01, affinitySD = 0.25, timeVaryingAffinitySD = 0.05,
     randConstantSD = 0.05, overrideNoise = TRUE)
     
- x2 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.1,
+ x2 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.3,
     nControl = 20, misMatch = 1, climSD = 0.1, climCenter = 10,
     satLambda = 0.05, rwSD = 0.01, affinitySD = 0.25, timeVaryingAffinitySD = 0.05,
     randConstantSD = 0.05, overrideNoise = TRUE)
     
  v = simul_data(x0)
  D <- melt(v$truth, id.var = 'date')
+ key <- c("treat" = "Treatment","season" = "Season", "climate" = "Climate",  "satellite" = "Satellite", "drift" = "Drift", "noise" = "Noise", "Y" = "Sim. Obs.")
   
+ D$variable <- key[as.character(D$variable) ] 
+ D$variable <- factor(D$variable, levels = key)
+
   # get forest vs grassland
   v$D$kind <- ifelse(grepl('tr', v$D$id),'Treated', 'forest')
   v$D$kind <- as.factor(v$D$kind)
@@ -47,7 +51,7 @@ x0 = list(sim = 117L, type = 'forest', sdNoise = 0.01, disturbance = 0.1,
  pdf('example.pdf')
  ggplot(D, aes(x = date, y = value)) + geom_line(aes(color = variable)) + 
          facet_grid(variable ~ ., scales = 'free_y') + theme(legend.position = "none")+ theme_bw() +
-         theme(legend.position = "none")
+         theme(legend.position = "none") + ylab('NDVI')
  dev.off()
  
  
@@ -102,10 +106,10 @@ ggb0 <-  ggplot(m[variable =='bfast',], aes(x = dayt, y = value))   +
 library(grid)
 grid.newpage()
 
-r1 <- rbind(ggplotGrob(ggl), ggplotGrob(ggb), ggplotGrob(ggdd), ggplotGrob(gggs), ggplotGrob(ggci), size = "last")
-pdf('example_noMismatch.pdf')
-grid.draw(r1)
-dev.off()
+# r1 <- rbind(ggplotGrob(ggl), ggplotGrob(ggb), ggplotGrob(ggdd), ggplotGrob(gggs), ggplotGrob(ggci), size = "last")
+# pdf('example_noMismatch.pdf')
+# grid.draw(r1)
+# dev.off()
 
 #######################
 #######################
@@ -261,25 +265,25 @@ dev.off()
 
 #####################################################
 
-library(grid)
-grid.newpage()
-r2 <- rbind(ggplotGrob(ggl), ggplotGrob(ggb), ggplotGrob(ggdd), ggplotGrob(gggs), ggplotGrob(ggci), size = "last")
+# library(grid)
+# grid.newpage()
+# r2 <- rbind(ggplotGrob(ggl), ggplotGrob(ggb), ggplotGrob(ggdd), ggplotGrob(gggs), ggplotGrob(ggci), size = "last")
 
 
-pdf('example_mismatch.pdf')
-grid.draw(r2)
-dev.off()
+# pdf('example_mismatch.pdf')
+# grid.draw(r2)
+# dev.off()
 
 
 
 
-pdf('example2.pdf', width = 8.5, height = 3)
- ggl   
- dev.off()
+# pdf('example2.pdf', width = 8.5, height = 3)
+ # ggl   
+ # dev.off()
 
-pdf('exampleATT.pdf')
- ggc
-dev.off()
+# pdf('exampleATT.pdf')
+ # ggc
+# dev.off()
 
 
 
