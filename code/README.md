@@ -2,8 +2,8 @@
 |---|---|
 | analysis.R | generate figures and outputs |
 | config.R | Set parameters for simulations |
-| error.sh | SLURM batch script for errors.R | 
-| errors.R | Compile the results of simulation run | 
+| error.sh | [DEPRECATED] SLURM batch script for errors.R | 
+| errors.R | [DEPRECATED] Compile the results of simulation run | 
 | eval_functions.R | functions for generating effect estimates |
 | example_fig.R | Generate figures showing simulation methodology |
 | genLoadBalance.R | Generate an batch-ready R script `loadBalance.R` based on parameters from `config.R`|
