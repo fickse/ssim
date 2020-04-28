@@ -14,7 +14,7 @@ chunkSize = 250
   # sub-daily outputs
   # dname <- paste0( 'run_',tag, strftime(now, format = '%Y%m%d%H%M%S'))
   
-  dname <- 'run_01'
+  dname <- 'r1'
 
 
 # where output files will be stored
@@ -30,8 +30,8 @@ dir.create(dataDir)
 
   # variables
   trtType = c('forest', 'grassland')
-  sdNoise = seq(.01, .07, .01)
-  disturbance = c(.1)
+  sdNoise = c(0.001, 0.005, seq(.01, .07, .01))
+  disturbance = c(.1,0)
   nControl = c(1, 5, 10, 50, 100)
   misMatch = c(0, .5, 1)
   overrideNoise = c(TRUE, FALSE)  # use sdNoise instead of defaults
@@ -53,6 +53,9 @@ dir.create(dataDir)
   # Remove all reps of sdNoise where sdNoise is over-ridden
   i <- which(RUN$sdNoise != .01 & RUN$overrideNoise)
   if(length(i) > 0) RUN <- RUN[-i,]
+
+  i <- which(RUN$scNoise < 0.01 & RUN$nControl < 10)
+  if (length(i) > 0) RUN <- RUN[-i,]
 
 
 # thin out combos to only have one confounder active at a time
