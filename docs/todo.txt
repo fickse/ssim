@@ -1,0 +1,23 @@
+SC Todo:
+
+Introduction:
+   
+   [ ] Finish introduction
+   [ ] "For instance"... examples of challenges due to large treatments
+   [ ] Examples of building experimentation into land treatments
+   [ ] " For example, something from the social sciences…"
+
+Methods
+  
+   [ ] Read Shay mesa study
+   [ ] Explain (and do) case study
+
+Results
+
+   [ ] Basic and simple eplanation of simulation results
+
+Discussion
+
+   [ ] Outline Major points to be made. Deep implications!
+
+

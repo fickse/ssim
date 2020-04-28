@@ -37,6 +37,7 @@ BFAST <- function(s){
     ef[tt > ddate] <- ef[tt > ddate] - base
     ef[tt <= ddate] <- 0
     
+    
     bp <- b$output[[1]]$bp.Vt
     cibp <- b$output[[1]]$ci.Vt
     return(list(bfast = b, time = tt, effect = ef, breakpoints = bp, ci = cibp, base = base))
@@ -100,18 +101,19 @@ DD <- function(G) {
 
     require(data.table)
     g <- data.table(G$D)
-    gx <- g[D == 0,]
-    m <- lm(y ~  id + as.factor(time), gx)
+
+    gi <- g[D == 0,]
+    m <- lm(y ~  id + as.factor(time), gi)
+
     
     g0 <- g[id == 'trt',]
     
     p <- predict(m, newdata = g0, interval = 'prediction')
     p <- as.data.frame(p)
     
-    data.frame( DDatt = g0$y - p$fit, DDupr = g0$y - p$upr, DDlwr = g0$y - p$lwr)
+   k =  data.frame( DDatt =  g0$y - p$fit  , DDupr = g0$y - p$upr  , DDlwr = g0$y -p$lwr )
     
 }
-
 
 
 
