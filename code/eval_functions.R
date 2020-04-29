@@ -1,3 +1,24 @@
+#Interrupted Time Series
+ITS <- function(s){
+
+    require(data.table)
+    g <- data.table(s$D)[id == 'trt',]
+    period <- median(s$truth[, .N, by = year(date)]$N)
+
+    m <- lm(y ~ time + time*D + cos(2*pi*time/period) + sin(2*pi*time/period), g)
+
+    p <- predict(m, interval = 'prediction')
+    g0 <- g
+    g0[,D:=0]
+    p.star <- predict(m, newdata = g0)
+    p <- p - p.star
+
+    
+   k =  data.frame( ITS.att = p[,1], ITS.lwr = p[,2], ITS.upr = p[,3])
+   k
+}
+
+
 
 #CausalImpact
 CI <- function(s){
@@ -136,7 +157,7 @@ evaluate <- function(s){
     tr <- cbind(tr, gs)
 
     tr$bfast <- BFAST(s)$effect
-
+    tr <- cbind(tr, ITS(s))
     tr
 
 }
@@ -165,6 +186,8 @@ evaluate.example <- function(s){
     b <- BFAST(s)
     tr$bfast <- as.numeric(b$bfast$output[[1]]$Tt)- b$base
 
+
+    
     tr
 
 }
