@@ -26,7 +26,7 @@ dir.create(dataDir)
 ###
 
   ddate <- as.Date('2006-02-15')
-  tt <- seq( as.Date('2001-01-01'), as.Date('2010-01-01'), by = 16)
+  tt <- seq( as.Date('1999-01-01'), as.Date('2010-01-01'), by = 16)
 
   # variables
   trtType = c('forest', 'grassland')
