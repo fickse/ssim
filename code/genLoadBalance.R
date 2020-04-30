@@ -49,7 +49,7 @@ for( i in job$start:job$end){
     
     ## process
     ev$ID <- as.numeric(i)
-    M <- merge(R, D, by = 'ID')
+    M <- merge(R, ev, by = 'ID')
     outs[[as.character(i)]] <- M
     
     cat('\n\n', (Sys.time() - t0), '\n--------------\n')
@@ -79,11 +79,11 @@ for( i in job$start:job$end){
       M$CIgt0_CI <-  0 < M$CIpoint.effect.upper & 0 > M$CIpoint.effect.lower
 
 
-      keep <- c("ID", "sim", "date", "time", "season",
-                "climate", "treat", "satellite", "drift", 
-                 "ERR_bfast", "ERR_DD", "ERR_CI", "ERR_GS", 
-                 "InCI_DD","InCI_GS", "InCI_CI", "CIgt0_DD",
-                 "CIgt0_GS", "CIgt0_CI")
+      keep <- c('ID', 'sim', 'date', 'time', 'season',
+                'climate', 'treat', 'satellite', 'drift', 
+                 'ERR_bfast', 'ERR_DD', 'ERR_CI', 'ERR_GS', 
+                 'InCI_DD','InCI_GS', 'InCI_CI', 'CIgt0_DD',
+                 'CIgt0_GS', 'CIgt0_CI')
       
       m <- M[, keep, with = F]
     
@@ -91,7 +91,7 @@ for( i in job$start:job$end){
       CON <- dbConnect(RSQLite::SQLite(), dbFile)
     
       # write to tables
-      cat('\nwriting to table "response" in ', dbFile, '\n')
+      cat('\nwriting to table response in ', dbFile, '\n')
 
       retry <- TRUE
       while( retry ){

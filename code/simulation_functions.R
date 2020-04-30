@@ -215,3 +215,52 @@ simul_data <- function(R) {
 # panelView(y ~ D, data = data.frame(v$D),  index = c("id","time"), type = 'outcome')
 
 
+simTest <- function(...){
+
+     R <- expand.grid(sim = 1, type = 'grassland',  sdNoise= .05, disturbance = .1,  nControl = 50, misMatch = .5, climSD = .1, climCenter = 10, satLambda = .05, rwSD = .01, affinitySD = .25, timeVaryingAffinitySD = .05, randConstantSD = .05, overrideNoise = TRUE, stringsAsFactors= FALSE)
+
+  x <- list(...)
+  for(n in names(x)){
+    R[[n]] <- x[[n]]
+  }
+
+  ddate <- as.Date('2006-02-15')
+  tt <- seq( as.Date('2001-01-01'), as.Date('2010-01-01'), by = 16)
+
+  cat( 'simlating data with ', paste0('\n\t', names(R), ' = ',R[1,]), '\n') 
+  simul_data(R)
+
+}
+
+
+simPlot <- function(sim){
+
+  require(ggplot2)
+  d <- sim$D
+  d$type <- ifelse(grepl('trt', d$id), 'treated', 'control')
+  ggplot( d, aes(x = dayt, y = y, color = type, group = id)) + geom_line(alpha = .5)  +
+   theme_minimal()
+
+}
+
+
+evPlot <- function(ev){
+   require(ggplot2)
+
+    D <-melt(ev, id = c('season', 'climate', 'treat', 'satellite', 'drift','noise', 'Y', 'date'))
+
+    D$method <- substr(D$variable, 1,2)
+
+    xx <- c("CIpoint.effect" = 'y.hat', "CIpoint.effect.upper" = 'up',
+            "CIpoint.effect.lower" = 'low', "DDatt"= 'y.hat', "DDupr" = 'up', "DDlwr" = 'low', "GSATT" = 'y.hat', "GSCI.lower" = 'low',
+            "GSCI.upper" = 'up', "bfast" = 'y.hat', 'ITS.att' = 'y.hat', 'ITS.upr' = 'up', 'ITS.lwr' = 'low')
+    D$variable <- xx[D$variable]
+
+    d <- dcast(D, date + Y + treat +  method ~ variable, value.var = 'value')
+
+    ggplot(d, aes(x = date, y = y.hat, group = method, color = method)) + geom_line() +
+    geom_ribbon(aes(ymin = low, ymax = up, fill = method), color = NA, alpha = .4) +
+        geom_line(aes(x = date, y = treat), color = 'red', linetype = 'dashed') +
+            facet_grid(  method ~ .)
+ 
+}
