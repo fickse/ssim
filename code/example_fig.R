@@ -1,5 +1,7 @@
 # demonstration plots
 
+library(grid)
+
 source('config.R')
 source('simulation_functions.R')
 source('eval_functions.R')
@@ -85,7 +87,7 @@ names(m)[1] <- 'dayt'
  ggci0 <-  ggplot(m[variable =='CausalImpact',], aes(x = dayt, y = value))   +   
           geom_line(size = lwd0, color =clrz['CausalImpact'] )  +  theme(legend.position = "none")+ 
           geom_ribbon(aes(ymin=lower, ymax=upper, linetype = NA, fill = variable), alpha = 0.2) +
-          theme_bw()  + theme(legend.position = "none") + xlab('date') + ylab('CausalImpact') + 
+          theme_bw()  + theme(legend.position = "none") + xlab('') + ylab('CausalImpact') + 
           geom_vline(xintercept = ddate, linetype = 'dotted') + geom_line(data = xy, aes(x = date, y = treat), linetype = 'longdash', size = lwd1) + scale_fill_manual(values = clrz['CausalImpact']) + scale_color_manual(values = clrz['CausalImpact'])
 
  ggdd0 <-  ggplot(m[variable =='DiD',], aes(x = dayt, y = value))   +   
@@ -98,13 +100,12 @@ names(m)[1] <- 'dayt'
           geom_ribbon(aes(ymin=lower, ymax=upper, linetype = NA, fill = variable), alpha = 0.2) +
           theme_bw()  + theme(legend.position = "none") + ylab('gsynth')+ theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())+geom_vline(xintercept = ddate, linetype = 'dotted') + geom_line(data = xy, aes(x = date, y = treat), linetype = 'longdash', size = lwd1)+ scale_fill_manual(values = clrz['gsynth'])
 
-ggb0 <-  ggplot(m[variable =='bfast',], aes(x = dayt, y = value))   +   
+ ggb0 <-  ggplot(m[variable =='bfast',], aes(x = dayt, y = value))   +   
           geom_line(size = lwd0, color = clrz['bfast'])   +  theme(legend.position = "none")+ 
           theme_bw()  + theme(legend.position = "none") + ylab('bfast')+ theme(axis.title.x=element_blank(), axis.text.x=element_blank(),axis.ticks.x=element_blank())+geom_vline(xintercept = ddate, linetype = 'dotted') + geom_line(data = xy, aes(x = date, y = treat), linetype = 'longdash', size = lwd1)+ scale_fill_manual(values = clrz['bfast'])
 
 
-library(grid)
-grid.newpage()
+# grid.newpage()
 
 # r1 <- rbind(ggplotGrob(ggl), ggplotGrob(ggb), ggplotGrob(ggdd), ggplotGrob(gggs), ggplotGrob(ggci), size = "last")
 # pdf('example_noMismatch.pdf')
@@ -150,7 +151,7 @@ names(m)[1] <- 'dayt'
  ggci1 <-  ggplot(m[variable =='CausalImpact',], aes(x = dayt, y = value))   +   
           geom_line(size = lwd0, color =clrz['CausalImpact'])  +  theme(legend.position = "none")+ ylab('') +
           geom_ribbon(aes(ymin=lower, ymax=upper, linetype = NA, fill = variable), alpha = 0.2) +
-          theme_bw()  + theme(legend.position = "none") + xlab('date')  + 
+          theme_bw()  + theme(legend.position = "none") + xlab('')  + 
           geom_vline(xintercept = ddate, linetype = 'dotted') + geom_line(data = xy, aes(x = date, y = treat), linetype = 'longdash', size = lwd1) + scale_fill_manual(values = clrz['CausalImpact']) + scale_color_manual(values = clrz['CausalImpact'])
 
  ggdd1 <-  ggplot(m[variable =='DiD',], aes(x = dayt, y = value))   +   
@@ -207,7 +208,7 @@ names(m)[1] <- 'dayt'
  ggci2 <-  ggplot(m[variable =='CausalImpact',], aes(x = dayt, y = value))   +   
           geom_line(size = lwd0, color =clrz['CausalImpact'])  +  theme(legend.position = "none")+ 
           geom_ribbon(aes(ymin=lower, ymax=upper, linetype = NA, fill = variable), alpha = 0.2) +
-          theme_bw()  + theme(legend.position = "none") + xlab('date')  +  ylab('') +
+          theme_bw()  + theme(legend.position = "none") + xlab('')  +  ylab('') +
           geom_vline(xintercept = ddate, linetype = 'dotted') + geom_line(data = xy, aes(x = date, y = treat), linetype = 'longdash' , size = lwd1) + scale_fill_manual(values = clrz['CausalImpact']) + scale_color_manual(values = clrz['CausalImpact'])
 
  ggdd2 <-  ggplot(m[variable =='DiD',], aes(x = dayt, y = value))   +   

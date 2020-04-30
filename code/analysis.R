@@ -83,6 +83,13 @@ if( reload_data ) {
  # X[, winner := which.min(abs(.SD)), by = list(ID, date), .SDcols = cols_chosen]
  X[, winner := which.min(c(abs(ERR_bfast),abs(ERR_DD),abs(ERR_GS),abs(ERR_CI))), by = list(ID, date)]
  
+ 
+ X$confounder <- abs( X$season + X$climate + X$drift + X$satellite)  
+ cclasses <- c( 0, .001, 0.01, 0.1, 0.5, 1.5)
+ X[, conBin := cut(confounder, cclasses)]
+
+ 
+ 
 ################################################################################
 ################################################################################
  
@@ -178,7 +185,7 @@ if( reload_data ) {
         theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
         scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -210,7 +217,7 @@ if( reload_data ) {
         #theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('% lowest error') + 
         #scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_fill_manual(values=clrz[c(4,1,3,2)])+ 
@@ -239,7 +246,7 @@ if( reload_data ) {
         theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
         scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -262,7 +269,7 @@ if( reload_data ) {
         theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
         scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -287,7 +294,7 @@ if( reload_data ) {
         theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
         scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -310,7 +317,7 @@ if( reload_data ) {
         theme(legend.position = 'top') + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('Signal / noise ratio') + ylab ('Proportion of intervals excluding zero') + 
         scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -320,12 +327,6 @@ if( reload_data ) {
  ###########################
  # error as a function of confounding
  
- X$confounder <- abs( X$season + X$climate + X$drift + X$satellite) 
- 
- cclasses <- c( -1, .001, 0.01, 0.1, 0.5, 1.5)
- X[, conBin := cut(confounder, cclasses)]
-
-
  
  V <- X[ , list( gsynth = mean(abs( ERR_GS)),
               bfast = mean(abs(ERR_bfast)), 
@@ -350,29 +351,31 @@ if( reload_data ) {
 
  
  #######
- # by noise and mismatch
+ # by confounder, noise and mismatch
  
- V <- X[ nControl > 1, list( gsynth = mean(abs( ERR_GS)),
+ V <- X[ nControl > 5, list( gsynth = mean(abs( ERR_GS)),
               bfast = mean(abs(ERR_bfast)), 
               DiD = mean(abs(ERR_DD)), 
               CausalImpact = mean(abs(ERR_CI)),
               pGS = mean( InCI_GS),
               pDD = mean( InCI_DD),
               pCI = mean( InCI_CI)
-            ) , by = list(conBin, sdNoise, misMatch ) ]
+            ) , by = list(conBin, sigBin, misMatch ) ]
 
+    
+    V <- melt(V, id.vars = c('conBin', 'sigBin', 'misMatch'))
+    vars <- c('gsynth', 'bfast', 'DiD', 'CausalImpact')
+    #V$sdNoise <- round(V$sdNoise, 3)
+    #V <- V[sdNoise %in% c(0.001, 0.03, 0.07),]
+     pdf('fig_err_x_Confounder_mismatch_sigBin.pdf')
   
-  V <- melt(V, id.vars = c('conBin', 'sdNoise', 'misMatch'))
-  vars <- c('gsynth', 'bfast', 'DiD', 'CausalImpact')
-   pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
-  
-    ggplot( V[variable %in% vars, ] , aes (x = conBin, y = value, group = variable) ) + 
+    ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
-        facet_grid(  misMatch ~ sdNoise, labeller=label_both)+
+        facet_grid(  misMatch ~ conBin, labeller=label_both)+
         theme(legend.position = c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
         xlab('confounder intensity') + ylab ('Absolute Error') + 
         scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
@@ -392,18 +395,19 @@ if( reload_data ) {
   
   V <- melt(V, id.vars = c('conBin', 'sigBin', 'misMatch'))
   vars <- c('gsynth', 'bfast', 'DiD', 'CausalImpact')
-   pdf('fig_CI_x_Confounder_sigNoise.pdf')
+  setnames(V, 'conBin', 'Conf.')
+    pdf('fig_CI_x_Confounder_sigNoise.pdf')
   
     ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
-        facet_grid(  misMatch ~ conBin, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        facet_grid(  misMatch ~ Conf., labeller=label_both)+
+        theme(legend.position = "bottom") +  #c(.12,.88)) + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
-        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
-        xlab('confounder intensity') + ylab ('Absolute Error') + 
-        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
-        scale_color_manual(values=clrz)+ 
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+        xlab('Signal to Noise Ratio') + ylab ('% Confidence Interval excluding 0') + 
+        scale_linetype_manual(values=c("longdash", "twodash", "dotted"))+
+        scale_color_manual(values=clrz[c(1,3,4)])+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
   
