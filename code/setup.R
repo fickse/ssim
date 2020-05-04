@@ -22,13 +22,13 @@ source('eval_functions.R')
 # load config
 source('config.R')
 
-
 # outputs directory
 # For each invocation of run_all.R, create a new directory and store all results there
 
 outdir <- file.path( 'outputs', dname )
 dir.create(outdir, recursive =TRUE)
 
+dir.create( file.path(outdir, 'log'))
 
 ########################################################
 ########################################################
