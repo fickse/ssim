@@ -153,6 +153,15 @@ simul_data <- function(R) {
       noi <- c('grassland' = sdNoise, 'forest' = sdNoise)
   } 
 
+  #Add spatial autocorr?
+  ac <- rep(1, length(ctrT))
+  moransI <- 0
+  if( auto_range > 0){
+   ac.v <-  sac(auto_range)
+   ac <- ac.v$sac
+   moransI <- ac.v$moransI
+  }
+  
   for( i in 1:length(ctrT)){
      
      affinity <- rnorm(1, 0, affinitySD)
@@ -169,8 +178,22 @@ simul_data <- function(R) {
           nse <- noise(noi['forest'], tt)
           hadj <- ybar('forest', tt)
       }
-      
-     y = hadj + nse + seas + sat * affinity + climAnom*affinity + rw * affinity + const
+
+     # add autocor
+     
+       hadj.v <- ifelse('hadj' %in% auto_type, ac[i], 1)
+       nse.v <- ifelse('nse' %in% auto_type, ac[i], 1)     
+       sat.v <- ifelse('sat' %in% auto_type, ac[i], 1)
+       clim.v <- ifelse('climAnom' %in% auto_type, ac[i], 1)
+       rw.v <- ifelse('rw' %in% auto_type, ac[i], 1)     
+
+     
+     y = hadj*hadj.v  + nse*nse.v + seas + sat * affinity * sat.v + climAnom*affinity * clim.v + rw * affinity * rw.v + const
+
+     if( 'response' %in% auto_type ){
+        y <- y * ac[i]
+     }
+
      ctrl[i,] = y
 
   }
@@ -201,7 +224,8 @@ simul_data <- function(R) {
     
    list(
     D = D,
-    truth = truth
+    truth = truth,
+    sac = moransI
   ) 
 }
 
@@ -217,7 +241,7 @@ simul_data <- function(R) {
 
 simTest <- function(...){
 
-     R <- expand.grid(sim = 1, type = 'grassland',  sdNoise= .05, disturbance = .1,  nControl = 50, misMatch = .5, climSD = .1, climCenter = 10, satLambda = .05, rwSD = .01, affinitySD = .25, timeVaryingAffinitySD = .05, randConstantSD = .05, overrideNoise = TRUE, stringsAsFactors= FALSE)
+     R <- expand.grid(sim = 1, type = 'grassland',  sdNoise= .05, disturbance = .1,  nControl = 50, misMatch = .5, climSD = .1, climCenter = 10, satLambda = .05, rwSD = .01, affinitySD = .25, timeVaryingAffinitySD = .05, randConstantSD = .05, overrideNoise = TRUE, stringsAsFactors= FALSE, auto_range = 0, auto_type = 'response')
 
   x <- list(...)
   for(n in names(x)){
@@ -244,7 +268,7 @@ simPlot <- function(sim){
 }
 
 
-evPlot <- function(ev){
+evPlot <- function(ev, type = 'abs'){
    require(ggplot2)
 
     D <-melt(ev, id = c('season', 'climate', 'treat', 'satellite', 'drift','noise', 'Y', 'date'))
@@ -257,10 +281,63 @@ evPlot <- function(ev){
     D$variable <- xx[D$variable]
 
     d <- dcast(D, date + Y + treat +  method ~ variable, value.var = 'value')
+    if( type == 'abs'){
+      return (ggplot(d, aes(x = date, y = y.hat, group = method, color = method)) + geom_line() +
+            geom_ribbon(aes(ymin = low, ymax = up, fill = method), color = NA, alpha = .4) +
+            geom_line(aes(x = date, y = treat), color = 'red', linetype = 'dashed') +
+            facet_grid(  method ~ .))
+    }
+    if( type == 'error'){
+      d$err <- d$y.hat - d$treat
+      d <- d[date > ddate,]
+      d$absErr <- abs(d$err)
+      d[,cumulErr := cumsum(absErr), by = list(method)]
 
-    ggplot(d, aes(x = date, y = y.hat, group = method, color = method)) + geom_line() +
-    geom_ribbon(aes(ymin = low, ymax = up, fill = method), color = NA, alpha = .4) +
-        geom_line(aes(x = date, y = treat), color = 'red', linetype = 'dashed') +
-            facet_grid(  method ~ .)
- 
+      ggplot(d, aes(x = date, y=cumulErr, color = method)) + geom_line()
+    }
+   
 }
+
+
+# generate a spatial field
+
+
+srf <- function( x = 100, y = 100, sill = .25, r = 10){
+          require(gstat)
+          require(raster)
+          xy <- expand.grid(1:x, 1:y)
+          names(xy) <- c('x','y')
+          g.dummy <- gstat(formula=z~1, locations=~x+y, dummy=T, beta=1, model=vgm(psill=sill, range=r, model='Exp'), nmax=20)
+
+          yy <- predict(g.dummy, newdata=xy, nsim=1,  debug.level = 0)
+          r <- raster(matrix(yy$sim1, y,x))
+          r
+}
+
+
+
+m.i <- function(x,y,z){
+          require(ape)
+          ozone.dists <- as.matrix(dist(cbind(x, y)))
+
+          ozone.dists.inv <- 1/ozone.dists
+          diag(ozone.dists.inv) <- 0
+
+
+          ape::Moran.I(z, ozone.dists.inv)
+    }
+
+sac <- function(rad, side = 20, n = 100){
+
+          require(data.table)
+          sr <- srf(side,side, sill = .01, r =rad)
+
+          a <- sampleRandom(sr, n, xy = TRUE)
+          morans <- m.i(a[,'x'], a[,'y'], a[,'layer'])$observed
+          v <- data.table(a)
+          v$moransI <- morans
+          setnames(v, 'layer', 'sac')
+          v[, list(sac, moransI)]
+
+    }
+
