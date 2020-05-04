@@ -35,21 +35,38 @@ dir.create(dataDir)
   nControl = c(1, 5, 10, 50, 100)
   misMatch = c(0, .5, 1)
   overrideNoise = c(TRUE, FALSE)  # use sdNoise instead of defaults
+  auto_range = c(0, 10)
+  auto_type = c('hadj', 'climAnom;sat;rw', 'nse','response')
+
 
   # set params
-  climSD = .1
+  climSD = .5
   climCenter = 10
   satLambda = .05
-  rwSD = .01
+  rwSD = .1
   affinitySD = .25
   timeVaryingAffinitySD = .05
   randConstantSD = .05
   
   #
-  RUN <- expand.grid(sim = 1:nsim, type = trtType,  sdNoise= sdNoise, disturbance = disturbance,  nControl = nControl, misMatch = misMatch, climSD = climSD, climCenter = climCenter, satLambda = satLambda, rwSD = rwSD, affinitySD = affinitySD, timeVaryingAffinitySD = timeVaryingAffinitySD, randConstantSD = randConstantSD, overrideNoise = overrideNoise)
+  RUN <- expand.grid(sim = 1:nsim, type = trtType,  sdNoise= sdNoise, disturbance = disturbance,  nControl = nControl, misMatch = misMatch, climSD = climSD, climCenter = climCenter, satLambda = satLambda, rwSD = rwSD, affinitySD = affinitySD, timeVaryingAffinitySD = timeVaryingAffinitySD, randConstantSD = randConstantSD, overrideNoise = overrideNoise, auto_range = auto_range, auto_type = auto_type, stringsAsFactors = FALSE)
   
   # thin Runs here
-  
+
+  # Run autocorr on specific sets of other params
+
+  # only keep sdnoise = 0.05 & grassland & n = 100 & mismatch = .5
+  w <- which(RUN$auto_range > 0 & RUN$sdNoise != .05 & RUN$type == 'forest' & RUN$nControl != 100 & RUN$misMatch != .5 )
+  if(length(w) > 0) RUN <- RUN[-w,]
+
+  # remove autocor permutations for auto_range = 0)
+  w <- which(RUN$auto_range == 0 & RUN$auto_type != 'nse')
+  if(length(w) > 0) RUN <- RUN[-w,]
+
+  # dont override noise for autocor simulations
+  w <- which(RUN$auto_range > 0 & !RUN$overrideNoise)
+  if(length(w) > 0 ) RUN <- RUN[-w,]
+
   # Remove all reps of sdNoise where sdNoise is over-ridden
   i <- which(RUN$sdNoise != .01 & RUN$overrideNoise)
   if(length(i) > 0) RUN <- RUN[-i,]
@@ -80,7 +97,7 @@ cat(nrow(RUN), ' sims total\n')
 # SLURM parameters
 nodes <- 1
 cores <- 24
-timeLimit <- "01:30:00"
+timeLimit <- "01:00:00"
 partition <- 'normal'
 #qos <- 'normal'
 output <- 'log/job-%A_%a.out'
