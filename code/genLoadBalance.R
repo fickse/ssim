@@ -67,25 +67,31 @@ for( i in job$start:job$end){
       M$ERR_DD <- M$DDatt - M$treat
       M$ERR_CI <- M$CIpoint.effect - M$treat
       M$ERR_GS <- M$GSATT - M$treat
+      M$ERR_ITS <- M$ITS.att - M$treat
 
       # treatment value In CI
       
-      M$InCI_DD <-  M$treat > M$DDupr & M$treat < M$DDlwr
+      M$InCI_DD <-  M$treat < M$DDupr & M$treat > M$DDlwr
       M$InCI_GS <-  M$treat < M$GSCI.upper & M$treat > M$GSCI.lower
       M$InCI_CI <-  M$treat < M$CIpoint.effect.upper & M$treat > M$CIpoint.effect.lower
-      
-      M$CIgt0_DD <- 0 > M$DDupr & 0 < M$DDlwr
-      M$CIgt0_GS <-  0 < M$GSCI.upper & 0 > M$GSCI.lower
-      M$CIgt0_CI <-  0 < M$CIpoint.effect.upper & 0 > M$CIpoint.effect.lower
+      M$InCI_IT <-  M$treat < M$ITS.upr & M$treat > M$ITS.lwr
 
+      # power - ability to detect true effect
+      M$CIgt0_DD <- M$DDupr < 0 
+      M$CIgt0_GS <-   M$GSCI.upper < 0 
+      M$CIgt0_CI <-  M$CIpoint.effect.upper < 0
+      M$CIgt0_IT <-  M$ITS.upr < 0
 
       keep <- c('ID', 'sim', 'date', 'time', 'season',
                 'climate', 'treat', 'satellite', 'drift', 
                  'ERR_bfast', 'ERR_DD', 'ERR_CI', 'ERR_GS', 
                  'InCI_DD','InCI_GS', 'InCI_CI', 'CIgt0_DD',
-                 'CIgt0_GS', 'CIgt0_CI')
+                 'CIgt0_GS', 'CIgt0_CI', 'ERR_ITS', 'InCI_IT',
+                 'CIgt0_IT')
       
       m <- M[, keep, with = F]
+
+      m$insert_dt <- Sys.time()
     
       # connect to db
       CON <- dbConnect(RSQLite::SQLite(), dbFile)
