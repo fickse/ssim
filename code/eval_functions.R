@@ -132,7 +132,7 @@ DD <- function(G) {
     p <- predict(m, newdata = g0, interval = 'prediction')
     p <- as.data.frame(p)
     
-   k =  data.frame( DDatt =  g0$y - p$fit  , DDupr = g0$y - p$upr  , DDlwr = g0$y -p$lwr )
+   k =  data.frame( DDatt =  g0$y - p$fit  , DDlwr = g0$y - p$upr  , DDupr = g0$y -p$lwr )
     
 }
 
