@@ -104,7 +104,13 @@ for(r in rr){
   d[[r]] <- dat
 }
 
+
 X <- do.call(rbind, d)
+
+##
+ load("C:\\projects\\ssim\\code\\caseStudy\\out\\output.RData")
+
+
 X$unid <- paste0(X$id, X$pixelID)
 #X$id <- gsub('_.*', '', X$id)
 
@@ -120,7 +126,8 @@ X[, bfastcum := cumsum(bfast), by = list(id, pixelID, time > 0)]
   
 
 v <- X[ year(dayt) %in% 2010 & month(dayt) %in% c( 3:11),]
-v <- v[ , list( id, CausalImpact = point.effect, DiD = DDatt, gsynth = GSATT, bfast = bfast)]
+setnames(v, 'y', 'Raw SATVI')
+v <- v[ , list( id, `Raw SATVI`, CausalImpact = point.effect, DiD = DDatt, gsynth = GSATT, bfast = bfast)]
 v <- melt(v, id = 'id')
 
   #JOYPLOT
@@ -155,10 +162,15 @@ jp <- function(v) {
  p1 <- jp( v[variable == 'CausalImpact',]) + xlim(-15000,15000)+ theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
  p2 <- jp( v[variable == 'gsynth',])+ xlim(-15000,15000) + theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
  p3 <- jp( v[variable == 'DiD',])+ xlim(-15000,15000) + theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
- p4 <- jp( v[variable == 'bfast',]) + xlim(-250,50) + theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
-pdf('joyResults.pdf', width = 6 , height = 6)
+   p4 <- jp( v[variable == 'bfast',]) + xlim(-250,50) + theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
+   p5 <- jp( v[variable == 'Raw SATVI',])  + theme(axis.ticks.x=element_blank(), axis.ticks.y=element_blank())
+   
+ 
+ 
+pdf('figs/joyResults.pdf', width = 8 , height = 6)
 require(gridExtra)
-grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+grid.arrange(p5, p1, p2, p4,p3, ncol = 3, nrow = 2)
+#grid.arrange(p5, p1, p2, p3, p4, layout_matrix = matrix( c( 1, 1, 1, 1,2,3,4,5), 2, 4))
 dev.off()
 
 

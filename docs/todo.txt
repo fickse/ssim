@@ -6,12 +6,18 @@ Introduction:
    [ ] "For instance"... examples of challenges due to large treatments
    [ ] Examples of building experimentation into land treatments
    [ ] " For example, something from the social sciences…"
-
+   [ ] Better lit review on synthetic control
+   [ ] Source for DiD
+   [ ] Who said SC is an extension of DID?
+   
 Methods
   
-   [ ] Read Shay mesa study
-   [ ] Explain (and do) case study
-
+   [X] Read Shay mesa study
+   [X] Explain (and do) case study
+   [ ] Explain BFAST better and make note that it is really about identifying break points
+   [ ] Redo confidence figure
+   [ ] Redo error figure with confounder acrosst
+ 
 Results
 
    [ ] Basic and simple eplanation of simulation results
