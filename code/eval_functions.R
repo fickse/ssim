@@ -157,7 +157,9 @@ evaluate <- function(s){
     tr <- cbind(tr, gs)
 
     tr$bfast <- BFAST(s)$effect
+
     tr <- cbind(tr, ITS(s))
+
     tr
 
 }
@@ -186,7 +188,7 @@ evaluate.example <- function(s){
     b <- BFAST(s)
     tr$bfast <- as.numeric(b$bfast$output[[1]]$Tt)- b$base
 
-
+    tr <- cbind(tr, ITS(s))
     
     tr
 
