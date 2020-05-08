@@ -78,36 +78,18 @@ if( reload_data ) {
 
 R <- data.table(RUN)
 R$ID <- 1:nrow(R)
-#X <- merge(D, R[, list(ID, sdNoise, nControl, misMatch, type)], by = 'ID')
-
-#X <- D
-#X[, sigNoise := abs( treat / sdNoise) ]
- 
-# X <-  X[which(X$time > 0),]
- 
-# bins <- c(0,.001, .01, .05, .1, .5, 1, 5, 10, 50, 100) 
- #bins <- c(-1,.00001, seq(.01, 10, by = .01)) 
-# X[, sigBin := cut(sigNoise, bins)]
- 
- # cols_chosen <- c("ERR_bfast", "ERR_DD", "ERR_GS", "ERR_CI")
- # X[, winner := which.min(abs(.SD)), by = list(ID, date), .SDcols = cols_chosen]
-
-
- #X[, winner := which.min(c(abs(ERR_bfast),abs(ERR_DD),abs(ERR_GS),abs(ERR_CI), abs(ERR_ITS))), by = list(ID, date)]
 
  D[ , wa := wa(ERR.abs, N), by = list(ID,  method, sigBin)]
  D[, won := wa ==  min(wa), by = list(ID, sigBin)]
 
+ D <- merge(D, R, by = 'ID')
 
 ################################################################################
 ################################################################################
  
  ## check status
- R <- data.table(RUN)
- R$ID <- 1:nrow(R)
 
- D <- merge(D, R, by = 'ID')
- 
+
  N = D[,.N, by = list(sdNoise, nControl, misMatch, type)]
  N0 = R[, .N, by = list(sdNoise, nControl, misMatch, type)]
 
@@ -131,10 +113,10 @@ R$ID <- 1:nrow(R)
 
 
 
-
- normal <- which(D$auto_range > 0 )
+ placebo <- which(D$auto_range < 1 & D$disturbance == 0)
+ normal <- which(D$auto_range < 1 & !is.na(D$sigBin) )
  X <- D[normal,]
- 
+ P <- D[placebo,] 
 
 
 
@@ -195,10 +177,10 @@ R$ID <- 1:nrow(R)
 "
 
   V <- X[,
-         list( value = wa(abs, N), ave = wa(ERR.ave, N)),
+         list( value = wa(ERR.abs, N), ave = wa(ERR.ave, N)),
          by = list( sigBin,nControl, variable =method)]
 
-
+#  V <- na.omit(V)
 
   pdf('fig_err_x_sigNoise_nControl.pdf')
   
@@ -206,7 +188,14 @@ R$ID <- 1:nrow(R)
         geom_line(aes(color = variable))+ facet_wrap(~ nControl)
     
   dev.off()
+
+  pdf('fig_bias_x_sigNoise_nControl.pdf')
   
+    ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = ave, group = variable) ) + 
+        geom_line(aes(color = variable))+ facet_wrap(~ nControl)
+    
+  dev.off()
+
 ################################################################################
 ################################################################################
  
@@ -226,6 +215,9 @@ R$ID <- 1:nrow(R)
   V <- melt(V, id.vars = c('sigBin', 'misMatch', 'nControl'))
   vars <- c('gsynth', 'bfast', 'DiD', 'CausalImpact')
  "
+  
+  vars <- vars[-grep( 'bf', vars)]
+
   V <- X[ which(X$nControl %in% c(1,5,50, 100)),
          list( value = wa(ERR.abs, N), ave = wa(ERR.ave, N)),
          by = list( sigBin,misMatch,nControl, variable =method)]
@@ -236,11 +228,26 @@ R$ID <- 1:nrow(R)
     ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ nControl, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+  pdf('fig_bias_x_sigNoise_mismatch_nControl.pdf')
+  
+    ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = ave, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('Signal / noise ratio') + ylab ('Avg Error') + 
         scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
@@ -270,7 +277,7 @@ R$ID <- 1:nrow(R)
     
     V <- X[,
          list( value = sum(won)/.N*100),
-         by = list( sigBin,nControl, variable =method)]
+         by = list( sigBin,nControl, misMatch,variable =method)]
 
 
 
@@ -286,8 +293,8 @@ R$ID <- 1:nrow(R)
         xlab('Signal / noise ratio') + ylab ('% lowest error') + 
         #scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_fill_manual(values=clrz[c(4,1,3,2)])+ 
-        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid"))+ 
-        scale_x_continuous(breaks = c(2,4,6,8), labels=bins[c(3,5,7,9)])
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid"))#+ 
+        #scale_x_continuous(breaks = c(2,4,6,8), labels=bins[c(3,5,7,9)])
   dev.off()
 
   
@@ -311,15 +318,15 @@ R$ID <- 1:nrow(R)
 
     pdf('fig_sens_x_sigNoise_mismatch_nControl.pdf')
   
-    ggplot( V, aes (x = sigBin, y = value, group = variable) ) + 
+    ggplot( V[ variable %in% vars,], aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ nControl, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
-        xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
-        scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
+        xlab('Signal / noise ratio') + ylab ('%CI excluding 0') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
@@ -341,15 +348,15 @@ R$ID <- 1:nrow(R)
 
     pdf('fig_ballpark_x_sigNoise_mismatch_nControl.pdf')
   
-    ggplot( V, aes (x = sigBin, y = value, group = variable) ) + 
+    ggplot( V[variable %in% vars,], aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ nControl, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
         xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
-        scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
+        scale_linetype_manual(values=c("longdash","solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
@@ -371,15 +378,15 @@ V <- X[,
 
     pdf('fig_specificity_x_sigNoise_mismatch_nControl.pdf')
   
-    ggplot( V, aes (x = sigBin, y = value, group = variable) ) + 
+    ggplot( V[variable %in% vars,], aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ nControl, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
-        xlab('Signal / noise ratio') + ylab ('Absolute Error') + 
-        scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
+        xlab('Signal / noise ratio') + ylab ('% CI excluding 0') + 
+        scale_linetype_manual(values=c("longdash","solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
@@ -398,7 +405,7 @@ V <- X[,
   
     pdf('fig_specificity_x_nControl_mismatch.pdf')
   
-    ggplot( V, aes (x = sigBin, y = value, group = variable) ) + 
+    ggplot( V[variable %in% vars,], aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ nControl , labeller=label_both)+
         theme(legend.position = 'top') + 
@@ -406,7 +413,7 @@ V <- X[,
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
         xlab('Signal / noise ratio') + ylab ('Proportion of intervals excluding zero') + 
-        scale_linetype_manual(values=c("longdash","twodash", "dotted"))+
+        scale_linetype_manual(values=c("longdash","solid","twodash", "dotted"))+
         scale_color_manual(values=clrz)+ 
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
@@ -476,7 +483,7 @@ pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
     ggplot( V[variable %in% vars, ] , aes (x = conBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ sdNoise, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
@@ -486,7 +493,67 @@ pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
         theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
   dev.off()
   
-   
+######
+  # Err by confounder and mismatch
+    V <- X[,
+         list( abs = wa(ERR.abs, N), ave = wa(ERR.ave, N)),
+         by = list( conBin,misMatch, variable =method)]
+
+    V <- melt(V, id = c('conBin', 'misMatch', 'variable'))
+
+    g <- ggplot( V[variable %in% vars,], aes( x = conBin, y = value, group = variable)) +
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  variable.1 ~ misMatch, labeller=label_both, scales = 'free_y')+
+        theme(legend.position ='top') + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        xlab('confounder intensity') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+              scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+    
+pdf('testplot.pdf'); print(g) ; dev.off()
+
+
+#pdf('fig_err_x_Confounder_mismatch.pdf')
+  
+g1 <-    ggplot( V[variable %in% vars, ] , aes (x = conBin, y = value, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  . ~ misMatch, labeller=label_both)+
+        theme(legend.position ='top') + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        #theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        theme(axis.title.x=element_blank(),
+              axis.text.x=element_blank(),
+              axis.ticks.x=element_blank()) +
+        xlab('confounder intensity') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+#  dev.off()
+  
+
+#pdf('fig_bias_x_Confounder_mismatch.pdf')
+  
+ g2 <-    ggplot( V[variable %in% vars, ] , aes (x = conBin, y = ave, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  . ~ misMatch, labeller=label_both)+
+        theme(legend.position ='none') + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('Mean Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+pdf('figtest.pdf')
+grid.arrange(g1,g2)
+dev.off()
+
  #######
  # CI by confouder and sigBin
  "
@@ -503,7 +570,7 @@ pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
 "
 
   V <- X[,
-         list( value = wa(CIgt0, N)*100),
+         list( value = wa(CIgt0.ave, N)*100),
          by = list( conBin,misMatch,sigBin, variable =method)]
 
   pdf('fig_CI_x_Confounder_sigNoise.pdf')
@@ -511,7 +578,7 @@ pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
     ggplot( V[variable %in% vars, ] , aes (x = sigBin, y = value, group = variable) ) + 
         geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
         facet_grid(  misMatch ~ conBin, labeller=label_both)+
-        theme(legend.position = c(.12,.88)) + 
+        theme(legend.position = "top") + 
         theme(legend.title = element_blank()) + 
         theme(legend.box.background = element_rect(colour = "black"))+
         theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
@@ -524,3 +591,194 @@ pdf('fig_err_x_Confounder_mismatch_sdNoise.pdf')
   
 
  
+##########################
+##########################
+
+# Spatial Autocorrelation
+
+# morans I vs error
+sac <- which(D$auto_range > 1)
+Z <- D[sac,]
+
+
+  V <- X[,
+         list( value = wa(ERR.abs, N), ave = wa(ERR.ave, N)),
+         by = list( conBin,misMatch, variable =method)]
+
+
+    V <- melt(V, id = c('conBin', 'misMatch', 'variable'))
+
+    g <- ggplot( V[variable %in% vars,], aes( x = conBin, y = value, group = variable)) +
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  variable.1 ~ misMatch, labeller=label_both, scales = 'free_y')+
+        theme(legend.position ='top') + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        xlab('confounder intensity') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+              scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+    
+pdf('testplot.pdf'); print(g) ; dev.off()
+
+
+
+##########################
+#########################
+
+# False Positives
+
+# disturbance == 0
+  P <- P[which(P$method != 'bf'),]
+
+  V <- P[,
+         list( value = wa(CIgt0.ave, N)*100),
+         by = list( conBin,misMatch, variable =method)]
+
+
+  pdf('fig_placebo_CI_x_Confounder_sigNoise.pdf')
+  
+    ggplot( V , aes (x = conBin, y = value, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ ., labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+
+# false positive rate by nControl, confounder
+  V <- P[,
+         list( value = wa(CIgt0.ave, N)*100),
+         by = list( conBin,misMatch,nControl, variable =method)]
+
+
+  pdf('fig_placebo_CI_x_Confounder_nControl_misMatch.pdf')
+  
+    ggplot( V , aes (x = conBin, y = value, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('% CI excluding 0') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+
+# false positive rate by nControl, confounder -- errors
+  V <- P[,
+         list( value = wa(ERR.abs,N ), ave = wa(ERR.ave, N)),
+         by = list( conBin,misMatch,nControl, variable =method)]
+
+
+  pdf('fig_placebo_Err_x_Confounder_nControl_misMatch.pdf')
+  
+    ggplot( V , aes (x = conBin, y = value, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('Absolute Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+
+  pdf('fig_placebo_bias_x_Confounder_nControl_misMatch.pdf')
+  
+    ggplot( V , aes (x = conBin, y = ave, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('Average Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+# bias as function of sdNoise
+
+  V <- P[,
+         list( value = wa(ERR.abs,N ), ave = wa(ERR.ave, N), positive = wa(CIgt0.ave, N)*100),
+         by = list( conBin,misMatch,sdNoise, variable =method)]
+
+  pdf('fig_placebo_error_x_Confounder_sdNoise_misMatch.pdf')
+  
+    ggplot( V , aes (x = conBin, y = value, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~ sdNoise, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('confounder intensity') + ylab ('Average Error') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+  
+  #
+  J <- D[auto_range < 1,]
+  J$placebo <- ifelse(J$disturbance ==0, 'Placebo', 'True Difference')
+  J <- J[which(J$method != 'bf'),]
+  V <- J[ nControl %in% c(5, 10, 50),
+         list( value = wa(ERR.abs,N ), ave = wa(ERR.ave, N), positive = wa(CIgt0.ave, N)*100),
+         by = list( conBin,nControl, placebo, variable =method)]
+
+  pdf('fig_CI.pdf')
+  
+    ggplot( V, aes (x = conBin, y = positive, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  placebo ~nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = .5, vjust = .5))+
+        xlab('Pointwise Confounder Effect') + ylab ('% CI excluding 0') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+ 
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+
+
+ V <- J[ nControl %in% c(5, 10, 50),
+         list( value = wa(ERR.abs,N ), ave = wa(ERR.ave, N), positive = wa(CIgt0.ave, N)*100),
+         by = list( sigBin ,nControl, misMatch, variable =method)]
+
+V$sigBin[is.na(V$sigBin)] <- 0
+     V$sigBin <- factor(V$sigBin, levels = c("0", "(0.01,0.05]", "(0.05,0.1]","(0.1,0.5]", "(0.5,1]", "(1,5]", "(5,10]", "(10,50]", "(50,100]"))
+
+
+  pdf('fig_CI_noise.pdf')
+  
+    ggplot( V, aes (x = sigBin, y = positive, group = variable) ) + 
+        geom_line(aes(color = variable, linetype= variable))+ theme_bw() +
+        facet_grid(  misMatch ~nControl, labeller=label_both)+
+        theme(legend.position = "top") + 
+        theme(legend.title = element_blank()) + 
+        theme(legend.box.background = element_rect(colour = "black"))+
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+        xlab('Signal / Noise Ratio') + ylab ('% CI excluding 0') + 
+        scale_linetype_manual(values=c("longdash", "solid","twodash", "dotted"))+
+        scale_color_manual(values=clrz)+
+#        geom_vline(xintercept = 1.5) +
+        annotate("rect", xmin = .75, xmax = 1.25, ymin = -1, ymax =101,alpha = .2) +
+        theme(strip.background = element_rect(colour="black", fill="white",linetype="solid")) 
+  dev.off()
+
